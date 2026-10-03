@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Полное погружение</title>
+<meta name="theme-color" content="#222222">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Погружение">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/style.css?v=2">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/chat">Полное погружение</a>
+  <button class="me" id="meBtn" hidden aria-label="Профиль"></button>
+</header>
+<main id="view" class="view"><div class="boot">Загрузка…</div></main>
+<nav class="tabbar" id="tabbar" hidden>
+  <a href="#/chat" data-tab="chat">Чат<i class="dot" id="chatDot" hidden></i></a>
+  <a href="#/lessons" data-tab="lessons">Занятия</a>
+  <a href="#/people" data-tab="people" id="peopleTab" hidden>Ученики</a>
+</nav>
+<div id="overlay" class="overlay" hidden></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="/vendor/pocketbase.umd.js"></script>
+<script src="/vendor/marked.umd.js"></script>
+<script src="/vendor/purify.min.js"></script>
+<script src="/app.js?v=1"></script>
+</body>
+</html>
