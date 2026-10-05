@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ГРИП — глубина резко изображаемого пространства</title>
+<style>@font-face{font-family:"Inter";src:url("/fonts/InterVariable.woff2") format("woff2");font-weight:100 900;font-display:swap}</style>
+<style>
+:root{
+  --bg:#FFFFFF; --ink:#222222; --muted:#5A5A5A; --line:#E2E2E2; --soft:#F4F4F2;
+  --ter:#BD501F; --mus:#CCC26A; --onter:#FFFFFF;
+  --b1:#BD501F; --b2:#D98A5F; --b3:#CCC26A; --b4:#7E8C7A; --b5:#3B3B3B;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --bg:#1B1B1B; --ink:#F2F2F2; --muted:#B5B5B5; --line:#333333; --soft:#262626; --b5:#9A9A9A; }
+}
+:root[data-theme="dark"]{ --bg:#1B1B1B; --ink:#F2F2F2; --muted:#B5B5B5; --line:#333333; --soft:#262626; --b5:#9A9A9A; }
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Inter",Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--mus);outline-offset:2px}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 20px 40px}
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+h1{margin:0;font-weight:850;text-transform:uppercase;line-height:1.02;font-size:clamp(26px,4vw,44px);letter-spacing:-0.01em}
+.sub{color:var(--muted);margin:6px 0 0;font-size:15px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:940px){.layout{grid-template-columns:1fr}}
+.stage{position:relative;background:#111;overflow:hidden;aspect-ratio:3/2;width:100%}
+.stage canvas{display:block;width:100%;height:100%}
+.stage:fullscreen{aspect-ratio:auto;display:flex;align-items:center;justify-content:center;background:#000}
+.stage:fullscreen canvas{width:min(100vw,150vh);height:min(66.667vw,100vh)}
+.hud{position:absolute;left:14px;top:14px;display:flex;gap:8px;flex-wrap:wrap;pointer-events:none}
+.hud .p{background:rgba(34,34,34,.82);color:#fff;border-radius:100px;padding:6px 14px;font-weight:700;font-size:14px}
+.fs{position:absolute;right:12px;top:12px;border:0;background:rgba(34,34,34,.75);color:#fff;border-radius:100px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.panel{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--soft);border-radius:22px;padding:18px 20px}
+.big{display:flex;align-items:baseline;gap:8px}
+.big b{font-size:64px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+.big span{font-size:22px;font-weight:700;color:var(--muted)}
+.pill{display:inline-block;border-radius:100px;padding:5px 14px;font-weight:700;font-size:14px;background:var(--ter);color:var(--onter);margin-top:10px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.stats div{font-size:13px;color:var(--muted)}
+.stats strong{display:block;font-size:22px;color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
+.explain{font-size:15px;line-height:1.5;margin:0}
+.controls{margin-top:16px}
+.sliderbox{position:relative;padding:10px 0 4px}
+.bands{display:flex;height:10px;border-radius:100px;overflow:hidden}
+.bands i{display:block;height:100%}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;background:transparent;margin:-12px 0 0;height:34px;position:relative;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:10px;background:transparent}
+input[type=range]::-moz-range-track{height:10px;background:transparent}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:100px;background:var(--ink);border:4px solid var(--bg);margin-top:-10px;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:100px;background:var(--ink);border:4px solid var(--bg)}
+.bandnames{display:flex;font-size:11px;color:var(--muted);font-weight:600;margin-top:2px}
+.bandnames span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{border:1.5px solid var(--line);background:var(--bg);border-radius:100px;padding:7px 13px;font-weight:700;font-size:14px;cursor:pointer;font-variant-numeric:tabular-nums}
+.chip.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.seg{display:flex;background:var(--bg);border-radius:100px;padding:4px;gap:4px}
+.seg button{flex:1;border:0;background:transparent;border-radius:100px;padding:9px 10px;font-weight:700;font-size:14px;cursor:pointer}
+.seg button.on{background:var(--ink);color:var(--bg)}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:650;font-size:15px;cursor:pointer;padding:6px 0}
+.toggle input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:100px;background:var(--line);position:relative;cursor:pointer;flex:none;transition:background .15s}
+.toggle input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:100px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.toggle input:checked{background:var(--ter)}
+.toggle input:checked::after{left:21px}
+.hint{font-size:13px;color:var(--muted);margin:2px 0 0}
+.btn{border:0;border-radius:100px;padding:12px 20px;font-weight:800;font-size:15px;cursor:pointer;background:var(--mus);color:#222}
+.map{width:100%;height:auto;display:block}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+@media (max-width:700px){.notes{grid-template-columns:1fr}}
+.notes h3{margin:0 0 6px;font-size:16px;font-weight:850;text-transform:uppercase}
+.notes p{margin:0;font-size:15px}
+</style>
+<style>
+.stage canvas{cursor:crosshair}
+.lbl{font-size:13px;font-weight:700;margin:14px 0 4px;color:var(--muted)}
+.stats3{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.stats3 div{font-size:13px;color:var(--muted)}
+.stats3 strong{display:block;font-size:20px;color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}
+.dof{font-size:15px;font-weight:700;margin-top:6px}
+.notes{grid-template-columns:1fr 1fr 1fr}
+@media (max-width:900px){.notes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>ГРИП: глубина<br>резкости</h1>
+      <p class="sub">Тренажёр курса «Полное погружение» · Фотошкола 2.8</p>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="stage" id="stage">
+        <canvas id="cv" aria-label="Лысый мужчина с бородой на фоне Рима и ряда фонарей; размытие зависит от диафрагмы"></canvas>
+        <div class="hud" aria-hidden="true"><span class="p" id="hudS">Фокус 3 м</span><span class="p" id="hudN">f/2.8</span><span class="p" id="hudD" style="background:var(--ter)">ГРИП 0,3 м</span></div>
+        <button class="fs" id="fsBtn">На весь экран</button>
+      </div>
+      <div class="controls">
+        <div class="lbl">Дистанция фокусировки — камера подходит к герою или отходит</div>
+        <div class="sliderbox">
+          <div class="bands" style="background:linear-gradient(90deg,var(--ter),var(--mus),var(--b4))"></div>
+          <input type="range" id="dSlider" min="0" max="1000" step="1" aria-label="Дистанция фокусировки">
+          <div class="bandnames"><span style="width:50%">Близко: ГРИП тонкая</span><span style="width:50%;text-align:right">Далеко: ГРИП глубокая</span></div>
+        </div>
+        <div class="row" id="dChips"></div>
+        <div class="lbl">Диафрагма</div>
+        <div class="row" id="nChips" style="margin-top:4px"></div>
+        <div class="lbl">Фокусное расстояние</div>
+        <div class="row" id="fChips" style="margin-top:4px"></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="card">
+        <div class="lbl" style="margin-top:0">Дистанция фокусировки</div>
+        <div class="big"><b id="sBig">3</b><span id="sUnit">м</span></div>
+        <span class="pill" id="dofVal">ГРИП 0,3 м</span>
+        <div class="stats3">
+          <div>Диафрагма<strong id="nVal">f/2.8</strong></div>
+          <div>Фокусное<strong id="fVal">50 мм</strong></div>
+          <div>Ближняя граница<strong id="nearVal">—</strong></div>
+          <div>Дальняя граница<strong id="farVal">—</strong></div>
+        </div>
+      </div>
+      <div class="card"><p class="explain" id="explain"></p></div>
+      <div class="card">
+        <div class="row" style="margin-top:0"><button class="chip on" id="focusHero">Фокус на героя</button></div>
+        <p class="hint" style="margin-top:8px">Можно нажать на любой фонарь, землю или Колизей — фокус переедет туда, а камера останется на месте.</p>
+        <label class="toggle" style="margin-top:8px">Подсветить зону резкости<input type="checkbox" id="tZone"></label>
+        <p class="hint">Всё, что попадает в ГРИП, подсвечивается горчичным.</p>
+      </div>
+      <div class="card"><svg class="map" id="map" viewBox="0 0 300 120" role="img" aria-label="Схема: где начинается и заканчивается зона резкости"></svg></div>
+    </aside>
+  </div>
+
+  <div class="notes">
+    <div class="card"><h3>Дистанция фокусировки</h3><p>Самый недооценённый рычаг. Подойдите к герою на полметра — даже на f/8 резкость будет в пару сантиметров. Отойдите на 10 метров — и на f/2.8 резкими станут почти все фонари.</p></div>
+    <div class="card"><h3>Диафрагма</h3><p>Открыли (f/1.4–2.8) — зона резкости тоньше, фон мягче. Закрыли (f/11–22) — зона глубже. Но на маленькой дистанции даже f/16 не спасает.</p></div>
+    <div class="card"><h3>Фокусное</h3><p>С той же точки длинный фокус даёт меньшую ГРИП. Но если отойти так, чтобы герой остался того же размера, ГРИП почти не изменится — решает дистанция.</p></div>
+  </div>
+</div>
+
+<script>
+(function () {
+"use strict";
+const FRAME_H = 0.95, CAM_Y = 1.45, CAM_X = 0.12, COC = 0.03; // кружок нерезкости полного кадра, мм
+const STOPS = [1.4, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+const FOCALS = [24, 35, 50, 85, 105, 135, 200];
+const DISTS = [0.6, 1, 2, 3, 5, 10];
+const D_MIN = 0.5, D_MAX = 15;
+const tToD = (t) => D_MIN * Math.pow(D_MAX / D_MIN, t), dToT = (d) => Math.log(d / D_MIN) / Math.log(D_MAX / D_MIN);
+const N_MIN = 1.4, N_MAX = 22;
+const tToN = (t) => N_MIN * Math.pow(N_MAX / N_MIN, t), nToT = (n) => Math.log(n / N_MIN) / Math.log(N_MAX / N_MIN);
+const fmtM = (d) => !isFinite(d) || d > 9000 ? "∞" : (d < 10 ? d.toFixed(d < 1 ? 2 : 1) : Math.round(d).toString()).replace(".", ",") + " м";
+const fmtN = (n) => "f/" + (n < 9.95 ? (Math.round(n * 10) / 10).toString() : Math.round(n).toString());
+const S = { nTarget: 2.8, n: 2.8, fTarget: 50, f: 50, dT: 3, focusZ: null, sCur: null, zone: false };
+const cam = { x: CAM_X, y: CAM_Y, d: 3 };
+let lastKey = "";
+
+/* ===== цвета ===== */
+const HAZE = [239, 227, 204];
+function hex2rgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function hz(col, Z) { const a = 1 - Math.exp(-Z / 900), c = hex2rgb(col); return `rgb(${c.map((v, i) => Math.round(v + (HAZE[i] - v) * a)).join(",")})`; }
+const P = { skin: "#dcae92", skinSh: "#c3907a", skinSh2: "#cf9f86", skinHi: "#efcdb8", brow: "#6b5444", lip: "#a8604f",
+  beard: "#3a2c24", beardHi: "#4e3b30", shirt: "#3b3b3b", shirtDk: "#262626", button: "#a9a9a4", frame: "#5c5a55", white: "#fafaf8" };
+
+
+/* ===== холсты: цвет и глубина ===== */
+const view = document.getElementById("cv");
+const colorCv = document.createElement("canvas"), depthCv = document.createElement("canvas");
+const colorCtx = colorCv.getContext("2d"), depthReal = depthCv.getContext("2d", { willReadFrequently: true });
+let W = 0, H = 0, PXMM = 1;
+let ctx = colorCtx, DEPTHCOL = "#000";
+const cur = { f: 85 };
+// контекст глубины: всё, что рисуется, красится цветом-кодом расстояния слоя
+const depthCtx = new Proxy(depthReal, {
+  get(t, p) { const v = t[p]; return typeof v === "function" ? v.bind(t) : v; },
+  set(t, p, v) {
+    if (p === "fillStyle" || p === "strokeStyle") {
+      const m = typeof v === "string" && v.match(/rgba\([^)]*,\s*([\d.]+)\)/);
+      t[p] = m && parseFloat(m[1]) < 0.5 ? "rgba(0,0,0,0)" : DEPTHCOL; return true;
+    }
+    if (p === "globalAlpha") { t[p] = 1; return true; }
+    t[p] = v; return true;
+  }
+});
+function encDepth(Z) {
+  const v = Math.max(0, Math.min(1, Math.log(Z / 0.1) / Math.log(1e5)));
+  const q = Math.round(v * 65535);
+  return `rgb(${q >> 8},${q & 255},0)`;
+}
+const decDepth = (r, g) => 0.1 * Math.pow(1e5, (r * 256 + g) / 65535);
+
+/* ===== рисование: проекция слоя ===== */
+let cx = 0, cy = 0;
+function layer(Lz, fn) {
+  const Z = cam.d + Lz; if (Z <= 0.05) return;
+  DEPTHCOL = encDepth(Z);
+  const sc = cur.f / Z * PXMM;
+  ctx.setTransform(sc, 0, 0, -sc, cx - sc * cam.x, cy + sc * cam.y);
+  fn(Z, sc);
+}
+function ellipse(x, y, rx, ry, rot, fill) { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); ctx.fillStyle = fill; ctx.fill(); }
+function poly(pts, fill) { ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); }
+function rrect(x, y, w, h, r, fill) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); ctx.fillStyle = fill; ctx.fill(); }
+function line(x1, y1, x2, y2, w, col) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineWidth = w; ctx.strokeStyle = col; ctx.lineCap = "round"; ctx.stroke(); }
+
+
+/* ===== Рим ===== */
+function drawSky() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (ctx === depthCtx) { depthReal.fillStyle = "rgb(255,255,0)"; depthReal.fillRect(0, 0, W, H); return; }
+  const top = cy - PXMM * cur.f * Math.tan(55 * Math.PI / 180);
+  const g = ctx.createLinearGradient(0, cy, 0, Math.min(cy - 1, top));
+  g.addColorStop(0, "rgb(239,227,204)"); g.addColorStop(1, "#7aa3d1");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+function drawGround() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (ctx === depthCtx) { depthReal.fillStyle = "rgb(0,0,255)"; depthReal.fillRect(0, cy, W, H - cy); return; }
+  const g = ctx.createLinearGradient(0, cy, 0, H);
+  g.addColorStop(0, "rgb(222,206,178)"); g.addColorStop(1, "#b7a17c");
+  ctx.fillStyle = g; ctx.fillRect(0, cy, W, H - cy);
+  // брусчатка: поперечные швы
+  ctx.lineWidth = Math.max(1, W / 900); ctx.strokeStyle = "rgba(110,90,62,0.45)";
+  for (let z = 0.5; z < 400; z *= 1.12) {
+    const y = cy + PXMM * cur.f * cam.y / z; if (y > H + 2) continue;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  // продольные швы к точке схода
+  for (let X = -30; X <= 30; X += 1.2) {
+    const zn = 1.0, xn = cx + PXMM * cur.f * (X - cam.x) / zn, yn = cy + PXMM * cur.f * cam.y / zn;
+    ctx.beginPath(); ctx.moveTo(xn, yn); ctx.lineTo(cx - 0, cy); ctx.stroke();
+  }
+}
+function dome() {
+  layer(1300, (Z) => {
+    const c = (h) => hz(h, Z);
+    poly([[-375, 0], [-265, 0], [-265, 45], [-375, 45]], c("#c9b99c"));
+    poly([[-344, 45], [-296, 45], [-296, 67], [-344, 67]], c("#cdbfa6"));
+    ctx.beginPath(); ctx.ellipse(-320, 67, 25, 32, 0, 0, Math.PI); ctx.fillStyle = c("#93a0a9"); ctx.fill();
+    poly([[-323, 98], [-317, 98], [-317, 110], [-323, 110]], c("#cdbfa6"));
+  });
+}
+function colosseum() {
+  layer(230, (Z, sc) => {
+    const Xc = 35, R = 80, N = 30, th0 = -1.15, th1 = 1.15;
+    const stone = hz("#dbc49c", Z), dark = hz("#5e4b36", Z), light = hz("#eedcb9", Z), mid = hz("#bfa57d", Z);
+    const topOf = (t) => t < -0.85 ? 23 : (t < -0.5 ? 35 : 48);
+    for (let i = 0; i < N; i++) {
+      const ta = th0 + (th1 - th0) * i / N, tb = th0 + (th1 - th0) * (i + 1) / N, tm = (ta + tb) / 2;
+      const xa = Xc + R * Math.sin(ta), xb = Xc + R * Math.sin(tb), w = xb - xa, top = topOf(tm);
+      poly([[xa, 0], [xb, 0], [xb, top], [xa, top]], stone);
+      // тень кривизны
+      ctx.globalAlpha = (1 - Math.cos(tm)) * 0.55; poly([[xa, 0], [xb, 0], [xb, top], [xa, top]], "#6b5539"); ctx.globalAlpha = 1;
+      [[0, 10.5], [11.5, 22.5], [23.5, 34.5]].forEach(([y0, y1]) => {
+        if (y1 > top) return;
+        const ax = xa + w * 0.2, aw = w * 0.6, at = y1 - aw / 2 - (y1 - y0) * 0.12;
+        ctx.beginPath(); ctx.moveTo(ax, y0); ctx.lineTo(ax, at); ctx.arc(ax + aw / 2, at, aw / 2, Math.PI, 0, true); ctx.lineTo(ax + aw, y0); ctx.closePath();
+        ctx.fillStyle = dark; ctx.fill();
+      });
+      if (top >= 48 && i % 2 === 0) poly([[xa + w * 0.38, 40], [xa + w * 0.62, 40], [xa + w * 0.62, 43], [xa + w * 0.38, 43]], dark);
+      line(xa, 0, xa, top, Math.max(0.15, 1.5 / sc), mid);
+    }
+    // карнизы — длинные прямые: на них видна дисторсия
+    [10.5, 22.5, 34.5, 47.4].forEach((y) => {
+      const xa = Xc + R * Math.sin(th0), xb = Xc + R * Math.sin(th1);
+      let segS = null;
+      for (let i = 0; i <= N; i++) {
+        const t = th0 + (th1 - th0) * i / N, ok = topOf(t) > y;
+        const x = Xc + R * Math.sin(t);
+        if (ok && segS === null) segS = x;
+        if ((!ok || i === N) && segS !== null) { poly([[segS, y], [x, y], [x, y + 1.0], [segS, y + 1.0]], light); segS = null; }
+      }
+    });
+  });
+}
+function house(Lz, x, w, h, col) {
+  layer(Lz, (Z) => {
+    poly([[x, 0], [x + w, 0], [x + w, h], [x, h]], hz(col, Z));
+    poly([[x - 0.6, h], [x + w + 0.6, h], [x + w + 0.6, h + 1.2], [x - 0.6, h + 1.2]], hz("#8e4a2c", Z));
+    const win = hz("#3a3f33", Z);
+    for (let fy = 3; fy < h - 2; fy += 4) for (let fx = x + 1.5; fx < x + w - 1.5; fx += 3.2) poly([[fx, fy], [fx + 1.2, fy], [fx + 1.2, fy + 2.2], [fx, fy + 2.2]], win);
+  });
+}
+function pine(Lz, x, h, r) {
+  layer(Lz, (Z) => {
+    const g = hz("#42583a", Z), b = hz("#5b4636", Z);
+    poly([[x - 0.3, 0], [x + 0.3, 0], [x + 0.7, h], [x + 0.2, h]], b);
+    [[0, 0, 1, 0.33], [-0.55, -0.12, 0.55, 0.26], [0.5, -0.1, 0.6, 0.27], [0.1, 0.18, 0.6, 0.24]].forEach(([dx, dy, s, k]) => ellipse(x + 0.4 + dx * r, h + 0.8 + dy * r, r * s, r * k, 0, g));
+  });
+}
+function cypress(Lz, x, h) {
+  layer(Lz, (Z) => {
+    ctx.beginPath(); ctx.moveTo(x - 1.3, 0.5); ctx.quadraticCurveTo(x - 1.8, h * 0.45, x, h); ctx.quadraticCurveTo(x + 1.8, h * 0.45, x + 1.3, 0.5); ctx.closePath();
+    ctx.fillStyle = hz("#30482b", Z); ctx.fill();
+  });
+}
+function forum() {
+  layer(70, (Z, sc) => {
+    const t = hz("#e2d2b2", Z), sh = hz("#b9a685", Z), dk = hz("#7d6c55", Z);
+    const x0 = -34;
+    poly([[x0 - 2, 0], [x0 + 12.5, 0], [x0 + 12.5, 3], [x0 - 2, 3]], dk);
+    for (let i = 0; i < 3; i++) {
+      const x = x0 + i * 4.2;
+      poly([[x - 0.75, 3], [x + 0.75, 3], [x + 0.68, 15.4], [x - 0.68, 15.4]], t);
+      for (let k = -2; k <= 2; k++) line(x + k * 0.27, 3.2, x + k * 0.24, 15.2, Math.max(0.05, 1 / sc), sh);
+      poly([[x - 1.05, 15.4], [x + 1.05, 15.4], [x + 1.05, 16.4], [x - 1.05, 16.4]], t);
+    }
+    poly([[x0 - 1.4, 16.4], [x0 + 9.8, 16.4], [x0 + 9.8, 18.6], [x0 - 1.4, 18.6]], t);
+    line(x0 - 1.4, 17.4, x0 + 9.8, 17.4, Math.max(0.05, 1.2 / sc), sh);
+  });
+}
+
+
+// фонари вдоль площади — линейка глубины
+function lamp(Lz, x) {
+  layer(Lz, (Z, sc) => {
+    const c = hz("#2c3530", Z), g = hz("#f3e2b0", Z);
+    poly([[x - 0.09, 0], [x + 0.09, 0], [x + 0.07, 0.35], [x - 0.07, 0.35]], c);
+    poly([[x - 0.045, 0.35], [x + 0.045, 0.35], [x + 0.035, 3.1], [x - 0.035, 3.1]], c);
+    poly([[x - 0.16, 3.1], [x + 0.16, 3.1], [x + 0.2, 3.5], [x - 0.2, 3.5]], c);
+    poly([[x - 0.13, 3.5], [x + 0.13, 3.5], [x + 0.17, 3.88], [x - 0.17, 3.88]], g);
+    poly([[x - 0.2, 3.88], [x + 0.2, 3.88], [x + 0.05, 4.05], [x - 0.05, 4.05]], c);
+    ellipse(x, 4.08, 0.04, 0.04, 0, c);
+  });
+}
+const LAMPS = [-1.5, -3, -5, -8, -12, -18, -27, -40, -60];
+
+/* ===== герой: лысый мужчина в рубашке и прозрачных очках ===== */
+function hero() {
+  layer(0, (Z, sc) => {
+    const px = (n) => n / sc; // толщина в пикселях экрана
+    // ноги — видны в режиме «Стоять на месте»
+    poly([[-0.17, 0.97], [-0.015, 0.97], [-0.035, 0.09], [-0.15, 0.09]], "#6b6257");
+    poly([[0.015, 0.97], [0.17, 0.97], [0.15, 0.09], [0.035, 0.09]], "#6b6257");
+    rrect(-0.2, 0, 0.18, 0.1, 0.04, "#2a2a2a"); rrect(0.02, 0, 0.18, 0.1, 0.04, "#2a2a2a");
+    // кисти рук
+    ellipse(-0.275, 0.935, 0.034, 0.05, 0.1, P.skin); ellipse(0.275, 0.935, 0.034, 0.05, -0.1, P.skin);
+    // рубашка
+    ctx.beginPath();
+    ctx.moveTo(-0.075, 1.53); ctx.quadraticCurveTo(-0.2, 1.52, -0.26, 1.47); ctx.quadraticCurveTo(-0.32, 1.42, -0.315, 1.3);
+    ctx.lineTo(-0.31, 0.98); ctx.lineTo(-0.245, 0.97); ctx.lineTo(-0.235, 0.92); ctx.lineTo(0.235, 0.92); ctx.lineTo(0.245, 0.97); ctx.lineTo(0.31, 0.98);
+    ctx.lineTo(0.315, 1.3); ctx.quadraticCurveTo(0.32, 1.42, 0.26, 1.47); ctx.quadraticCurveTo(0.2, 1.52, 0.075, 1.53); ctx.closePath();
+    ctx.fillStyle = P.shirt; ctx.fill();
+    // руки отделены складками
+    line(-0.228, 1.39, -0.238, 0.975, px(2.5), P.shirtDk); line(0.228, 1.39, 0.238, 0.975, px(2.5), P.shirtDk);
+    // шея и вырез
+    poly([[-0.048, 1.49], [0.048, 1.49], [0.05, 1.58], [-0.05, 1.58]], P.skinSh);
+    poly([[-0.042, 1.535], [0.042, 1.535], [0, 1.45]], P.skin);
+    // воротник
+    poly([[-0.078, 1.538], [-0.004, 1.448], [-0.062, 1.455], [-0.104, 1.505]], P.shirtDk);
+    poly([[0.078, 1.538], [0.004, 1.448], [0.062, 1.455], [0.104, 1.505]], P.shirtDk);
+    // планка и пуговицы
+    line(0, 1.45, 0, 0.925, px(2), P.shirtDk);
+    [1.4, 1.27, 1.14, 1.01].forEach((y) => ellipse(0.009, y, 0.0055, 0.0055, 0, P.button));
+    // карман
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(-0.165, 1.25, 0.085, 0.09, 0.008); else ctx.rect(-0.165, 1.25, 0.085, 0.09);
+    ctx.lineWidth = px(2); ctx.strokeStyle = P.shirtDk; ctx.stroke();
+
+    // голова
+    ellipse(-0.088, 1.675, 0.02, 0.032, 0, P.skinSh); ellipse(0.088, 1.675, 0.02, 0.032, 0, P.skinSh);
+    ellipse(0, 1.69, 0.086, 0.118, 0, P.skin);
+    // борода: от скул до подбородка, с усами
+    ctx.beginPath(); ctx.moveTo(-0.085, 1.66);
+    ctx.quadraticCurveTo(-0.094, 1.56, -0.04, 1.502); ctx.quadraticCurveTo(0, 1.482, 0.04, 1.502);
+    ctx.quadraticCurveTo(0.094, 1.56, 0.085, 1.66); ctx.quadraticCurveTo(0.072, 1.652, 0.06, 1.636);
+    ctx.quadraticCurveTo(0.03, 1.648, 0.0, 1.641); ctx.quadraticCurveTo(-0.03, 1.648, -0.06, 1.636); ctx.quadraticCurveTo(-0.072, 1.652, -0.085, 1.66); ctx.closePath();
+    ctx.fillStyle = P.beard; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-0.085, 1.655); ctx.quadraticCurveTo(-0.09, 1.57, -0.05, 1.52);
+    ctx.lineWidth = px(2); ctx.strokeStyle = P.beardHi; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0.085, 1.655); ctx.quadraticCurveTo(0.09, 1.57, 0.05, 1.52); ctx.stroke();
+    // брови
+    line(-0.055, 1.728, -0.02, 1.733, px(3.5), P.brow); line(0.02, 1.733, 0.055, 1.728, px(3.5), P.brow);
+    // глаза
+    [-1, 1].forEach((sd) => {
+      ellipse(sd * 0.037, 1.704, 0.013, 0.0075, 0, P.white);
+      ellipse(sd * 0.036, 1.704, 0.0055, 0.0055, 0, "#3b2c22");
+      ellipse(sd * 0.0345, 1.706, 0.0016, 0.0016, 0, "#ffffff");
+    });
+    // нос
+    poly([[-0.01, 1.712], [0.01, 1.712], [0.017, 1.668], [-0.017, 1.668]], P.skin);
+    ellipse(0, 1.664, 0.021, 0.018, 0, P.skin);
+    ellipse(0.005, 1.671, 0.007, 0.005, 0, P.skinHi);
+    ellipse(-0.01, 1.654, 0.006, 0.004, 0, P.skinSh); ellipse(0.01, 1.654, 0.006, 0.004, 0, P.skinSh);
+    // улыбка
+    ctx.beginPath(); ctx.moveTo(-0.026, 1.62); ctx.quadraticCurveTo(0, 1.6, 0.026, 1.62); ctx.quadraticCurveTo(0, 1.622, -0.026, 1.62); ctx.closePath();
+    ctx.fillStyle = P.lip; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-0.026, 1.62); ctx.quadraticCurveTo(0, 1.606, 0.026, 1.62);
+    ctx.lineWidth = px(2); ctx.strokeStyle = "#6e3a2e"; ctx.lineCap = "round"; ctx.stroke();
+    // авиаторы с прозрачными стёклами
+    const lens = (sd) => {
+      ctx.beginPath(); ctx.moveTo(sd * 0.008, 1.722); ctx.lineTo(sd * 0.072, 1.726);
+      ctx.bezierCurveTo(sd * 0.083, 1.708, sd * 0.075, 1.68, sd * 0.048, 1.673);
+      ctx.bezierCurveTo(sd * 0.022, 1.668, sd * 0.004, 1.69, sd * 0.008, 1.722); ctx.closePath();
+    };
+    [-1, 1].forEach((sd) => {
+      lens(sd); ctx.fillStyle = "rgba(225,240,255,0.2)"; ctx.fill();
+      ctx.lineWidth = px(2.5); ctx.strokeStyle = P.frame; ctx.stroke();
+      line(sd * 0.03, 1.716, sd * 0.045, 1.71, px(2), "rgba(255,255,255,0.7)");                   // блик на стекле
+      line(sd * 0.074, 1.722, sd * 0.088, 1.712, px(2.5), P.frame);                                // дужка
+    });
+    line(-0.066, 1.73, 0.066, 1.73, px(2.5), P.frame);                                             // верхняя перемычка
+    ctx.beginPath(); ctx.moveTo(-0.008, 1.712); ctx.quadraticCurveTo(0, 1.718, 0.008, 1.712);
+    ctx.lineWidth = px(2.5); ctx.strokeStyle = P.frame; ctx.stroke();
+  });
+}
+
+
+function drawScene(f) {
+  cur.f = f; cx = W / 2; cy = H / 2;
+  drawSky(); drawGround();
+  dome(); colosseum();
+  house(200, -160, 34, 22, "#c98a4e"); house(185, -120, 26, 18, "#d6a25c"); house(170, -90, 22, 20, "#b8653f");
+  house(190, 150, 30, 20, "#e0b77a"); house(175, 185, 26, 24, "#c98a4e");
+  pine(120, 60, 13, 7); pine(110, -70, 14, 7.5); cypress(95, -48, 16); cypress(93, -52, 13);
+  pine(90, 18, 12, 6); forum(); cypress(60, 9, 14); cypress(58, 12, 12);
+  pine(40, -16, 11, 5.5);
+  // фонари сзади героя — от дальних к ближним
+  LAMPS.filter((z) => z < 0).sort((a, b) => a - b).forEach((z) => lamp(-z, 1.45));
+  hero();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* ===== WebGL: размытие по кружку нерезкости ===== */
+const gl = view.getContext("webgl", { antialias: false, preserveDrawingBuffer: false });
+let prog = null, texC, texD, U = {};
+if (gl) {
+  const vs = "attribute vec2 p; varying vec2 v; void main(){ v = p * 0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }";
+  const fs = `precision highp float;
+uniform sampler2D tc, td; uniform vec2 res; uniform float f, N, s, pxmm, camY, cyPx, maxR, zone, nearZ, farZ;
+varying vec2 v;
+float depthAt(vec2 uv) {
+  vec4 d = texture2D(td, uv);
+  if (d.b > 0.5) { // земля: расстояние из положения по вертикали
+    float yPx = (1.0 - uv.y) * res.y;
+    float dy = yPx - cyPx;
+    return dy > 0.5 ? f * camY * pxmm / dy : 1.0e7;
+  }
+  float q = (floor(d.r * 255.0 + 0.5) * 256.0 + floor(d.g * 255.0 + 0.5)) / 65535.0;
+  return 100.0 * pow(1.0e5, q); // мм
+}
+float cocPx(float Z) {
+  float c = f * f / (N * (s - f)) * abs(Z - s) / Z; // диаметр на матрице, мм
+  return min(0.5 * c * pxmm, maxR);
+}
+void main() {
+  float zc = depthAt(v), rc = cocPx(zc);
+  vec3 acc = texture2D(tc, v).rgb; float ws = 1.0;
+  if (rc > 0.6) {
+    for (int i = 0; i < 64; i++) {
+      float fi = float(i);
+      float r = sqrt((fi + 0.5) / 64.0) * rc;
+      float a = fi * 2.39996323;
+      vec2 o = vec2(cos(a), sin(a)) * r;
+      vec2 uv = v + o / res;
+      float zs = depthAt(uv), rs = cocPx(zs);
+      float w = clamp(rs - r + 1.0, 0.0, 1.0);
+      if (zs > zc) w *= clamp(rc - r + 1.0, 0.0, 1.0);
+      acc += texture2D(tc, uv).rgb * w; ws += w;
+    }
+  }
+  vec3 col = acc / ws;
+  if (zone > 0.5 && zc >= nearZ && zc <= farZ) col = mix(col, vec3(0.8, 0.76, 0.42), 0.35);
+  gl_FragColor = vec4(col, 1.0);
+}`;
+  const sh = (t, src) => { const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  try {
+    prog = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+    gl.useProgram(prog);
+    const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const a = gl.getAttribLocation(prog, "p"); gl.enableVertexAttribArray(a); gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+    ["tc", "td", "res", "f", "N", "s", "pxmm", "camY", "cyPx", "maxR", "zone", "nearZ", "farZ"].forEach((n) => (U[n] = gl.getUniformLocation(prog, n)));
+    const mk = (unit, filt) => { const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filt); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filt);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+    texC = mk(0, gl.LINEAR); texD = mk(1, gl.NEAREST);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.uniform1i(U.tc, 0); gl.uniform1i(U.td, 1);
+  } catch (e) { console.warn(e); prog = null; }
+}
+const fallback = prog ? null : view.getContext("2d");
+
+/* ===== оптика ГРИП ===== */
+function dofLimits(fmm, N, sM) {
+  const s = sM * 1000, Hh = fmm * fmm / (N * COC) + fmm;
+  const near = s * (Hh - fmm) / (Hh + s - 2 * fmm);
+  const far = s < Hh ? s * (Hh - fmm) / (Hh - s) : Infinity;
+  return { near: near / 1000, far: far / 1000, hyper: Hh / 1000 };
+}
+function focusDist() { return S.focusZ === null ? cam.d : (S.focusZ === -Infinity ? 1e4 : Math.max(0.3, cam.d - S.focusZ)); }
+
+/* ===== интерфейс ===== */
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+STOPS.forEach((n) => {
+  const b = document.createElement("button"); b.className = "chip"; b.textContent = "f/" + n; b.dataset.n = n;
+  b.addEventListener("click", () => { S.nTarget = n; }); $("nChips").appendChild(b);
+});
+FOCALS.forEach((f) => {
+  const b = document.createElement("button"); b.className = "chip"; b.textContent = f + " мм"; b.dataset.f = f;
+  b.addEventListener("click", () => { S.fTarget = f; }); $("fChips").appendChild(b);
+});
+DISTS.forEach((d) => {
+  const b = document.createElement("button"); b.className = "chip"; b.textContent = fmtM(d); b.dataset.d = d;
+  b.addEventListener("click", () => { S.dT = d; S.focusZ = null; }); $("dChips").appendChild(b);
+});
+$("dSlider").addEventListener("input", (e) => { S.dT = tToD(e.target.value / 1000); S.focusZ = null; });
+$("focusHero").addEventListener("click", () => { S.focusZ = null; });
+$("tZone").addEventListener("change", (e) => { S.zone = e.target.checked; lastKey = ""; });
+$("fsBtn").addEventListener("click", () => {
+  const st = $("stage");
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (st.requestFullscreen) st.requestFullscreen().catch(() => {});
+});
+document.addEventListener("fullscreenchange", () => { $("fsBtn").textContent = document.fullscreenElement ? "Выйти" : "На весь экран"; resize(); });
+// клик по кадру — фокус в эту точку
+view.addEventListener("click", (e) => {
+  const r = view.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) / r.width * W), y = Math.round((e.clientY - r.top) / r.height * H);
+  const d = depthReal.getImageData(Math.max(0, Math.min(W - 1, x)), Math.max(0, Math.min(H - 1, y)), 1, 1).data;
+  let Z;
+  if (d[2] > 128) { const dy = y - cy; Z = dy > 0.5 ? cur.f * cam.y * PXMM / dy / 1000 : 1e4; }
+  else Z = decDepth(d[0], d[1]);
+  if (Z > 5000) { S.focusZ = -Infinity; return; }
+  if (Math.abs(Z - cam.d) < 0.02) { S.focusZ = null; return; }
+  S.focusZ = cam.d - Z;
+});
+
+function drawMap(s, lim) {
+  const svg = $("map"), ink = css("--ink"), mut = css("--muted"), ter = css("--ter"), mus = css("--mus");
+  const x0 = 22, x1 = 270, y = 62, minD = 0.4, maxD = 400;
+  const X = (d) => !isFinite(d) || d >= maxD ? x1 + 14 : x0 + Math.log(Math.max(d, minD) / minD) / Math.log(maxD / minD) * (x1 - x0);
+  const F = 'font-family="Inter, Arial, sans-serif"';
+  const nx = X(lim.near), fx = X(lim.far);
+  let ticks = "";
+  LAMPS.forEach((z) => { const d = cam.d - z; if (d > 0.3) ticks += `<rect x="${X(d) - 1.5}" y="${y - 18}" width="3" height="18" fill="${mut}"/>`; });
+  [1, 3, 10, 30, 100].forEach((d) => { ticks += `<line x1="${X(d)}" y1="${y + 10}" x2="${X(d)}" y2="${y + 14}" stroke="${mut}"/><text x="${X(d)}" y="${y + 25}" text-anchor="middle" font-size="9" fill="${mut}" ${F}>${d} м</text>`; });
+  svg.innerHTML = `<text x="8" y="12" font-size="11" fill="${mut}" ${F} font-weight="600">Вид сбоку · шкала логарифмическая</text>
+    <line x1="${x0}" y1="${y + 10}" x2="${x1 + 14}" y2="${y + 10}" stroke="${mut}" stroke-width="1"/>
+    <rect x="${nx}" y="${y - 26}" width="${Math.max(2, fx - nx)}" height="36" fill="${mus}" opacity="0.55"/>
+    ${ticks}
+    <circle cx="${X(cam.d)}" cy="${y - 8}" r="6" fill="#dcae92" stroke="${ink}" stroke-width="1.5"/>
+    <line x1="${X(s)}" y1="${y - 30}" x2="${X(s)}" y2="${y + 10}" stroke="${ter}" stroke-width="2.5"/>
+    <rect x="4" y="${y - 6}" width="12" height="12" rx="3" fill="${ink}"/>
+    <text x="${x1 + 14}" y="${y + 25}" text-anchor="middle" font-size="10" fill="${mut}" ${F}>∞</text>
+    <text x="${(nx + fx) / 2}" y="${y - 32}" text-anchor="middle" font-size="11" font-weight="800" fill="${ink}" ${F}>ГРИП</text>
+    <text x="8" y="${y + 48}" font-size="10" fill="${mut}" ${F}>■ камера  ● герой  ▮ фонари  | фокус</text>`;
+}
+
+function explainText(n, s, lim) {
+  const depth = lim.far - lim.near, onHero = S.focusZ === null;
+  const where = onHero ? `Камера в ${fmtM(s)} от героя` : `Фокус на ${fmtM(s)}`;
+  if (!isFinite(lim.far)) return `${where}, ${fmtN(n)}: резкость тянется до бесконечности — от ${fmtM(lim.near)} и до Колизея. Это гиперфокальная зона, так снимают город и пейзаж.`;
+  const dtxt = depth < 1 ? Math.round(depth * 100) + " см" : fmtM(depth);
+  if (s < 1.2) return `${where}, ${fmtN(n)}: резкая зона всего ${dtxt}. На такой дистанции даже закрытая диафрагма почти не помогает — попробуйте f/16 и сравните.`;
+  if (depth < 1) return `${where}, ${fmtN(n)}: резкая зона ${dtxt}. Резкий только герой, фонари за ним уже мягкие. Отойдите дальше — зона вырастет, даже не трогая диафрагму.`;
+  return `${where}, ${fmtN(n)}: резкая зона ${dtxt}. Чем дальше камера от точки фокуса, тем глубже ГРИП — в резкость попадают и фонари за героем.`;
+}
+
+function updateUI(n, s, lim) {
+  const depth = lim.far - lim.near;
+  const dtxt = isFinite(lim.far) ? (depth < 1 ? Math.round(depth * 100) + " см" : fmtM(depth)) : "до ∞";
+  $("nVal").textContent = fmtN(n); $("hudN").textContent = fmtN(n);
+  $("fVal").textContent = Math.round(S.f) + " мм";
+  $("dofVal").textContent = "ГРИП " + dtxt; $("hudD").textContent = "ГРИП " + dtxt;
+  const sm = fmtM(s); $("sBig").textContent = sm === "∞" ? "∞" : sm.replace(" м", ""); $("sUnit").textContent = sm === "∞" ? "" : "м";
+  $("hudS").textContent = "Фокус " + sm;
+  $("nearVal").textContent = fmtM(lim.near); $("farVal").textContent = fmtM(lim.far);
+  $("explain").textContent = explainText(n, s, lim);
+  const sl = $("dSlider"); if (document.activeElement !== sl) sl.value = Math.round(dToT(S.dT) * 1000);
+  document.querySelectorAll("#nChips .chip").forEach((b) => b.classList.toggle("on", +b.dataset.n === S.nTarget));
+  document.querySelectorAll("#dChips .chip").forEach((b) => b.classList.toggle("on", Math.abs(+b.dataset.d - S.dT) < 0.02 && S.focusZ === null));
+  document.querySelectorAll("#fChips .chip").forEach((b) => b.classList.toggle("on", +b.dataset.f === S.fTarget));
+  $("focusHero").classList.toggle("on", S.focusZ === null);
+  drawMap(s, lim);
+}
+
+/* ===== размер ===== */
+function resize() {
+  const st = $("stage");
+  let w = st.clientWidth;
+  if (document.fullscreenElement === st) w = Math.min(innerWidth, innerHeight * 1.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  W = Math.max(300, Math.round(w * dpr)); H = Math.round(W / 1.5);
+  [colorCv, depthCv, view].forEach((c) => { c.width = W; c.height = H; });
+  PXMM = W / 36; lastKey = "";
+  if (gl) gl.viewport(0, 0, W, H);
+}
+window.addEventListener("resize", resize);
+if (window.ResizeObserver) new ResizeObserver(resize).observe($("stage"));
+resize();
+
+/* ===== цикл ===== */
+function frame(now) {
+  S.n += (S.nTarget - S.n) * 0.3; if (Math.abs(S.n - S.nTarget) < 0.005) S.n = S.nTarget;
+  S.f += (S.fTarget - S.f) * 0.15; if (Math.abs(S.f - S.fTarget) < 0.05) S.f = S.fTarget;
+  cam.d += (S.dT - cam.d) * 0.15; if (Math.abs(cam.d - S.dT) < 0.0005) cam.d = S.dT;
+  // кадр: вблизи — лицо, издалека — герой в полный рост
+  const cov = cam.d * 24 / S.f;
+  cam.y = cov < 1.1 ? Math.min(1.83 - 0.5 * cov, 1.69 + 0.25 * cov) : Math.max(1.28, Math.min(cov * 0.35, 1.6));
+  cam.x = cov * 1.5 * 0.12;
+  const sT = focusDist();
+  S.sCur = S.sCur === null ? sT : S.sCur + (sT - S.sCur) * 0.2;
+  const s = S.sCur, lim = dofLimits(S.f, S.n, s);
+  const key = [S.n.toFixed(3), S.f.toFixed(2), cam.d.toFixed(4), s.toFixed(4), S.zone, W, S.nTarget, S.dT].join("|");
+  if (key !== lastKey) {
+    lastKey = key;
+    ctx = colorCtx; drawScene(S.f);
+    ctx = depthCtx; drawScene(S.f); ctx = colorCtx;
+    if (prog) {
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texC); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, colorCv);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texD); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, depthCv);
+      gl.uniform2f(U.res, W, H); gl.uniform1f(U.f, S.f); gl.uniform1f(U.N, S.n); gl.uniform1f(U.s, Math.min(s, 1e4) * 1000);
+      gl.uniform1f(U.pxmm, PXMM); gl.uniform1f(U.camY, cam.y * 1000); gl.uniform1f(U.cyPx, cy); gl.uniform1f(U.maxR, W * 0.028);
+      gl.uniform1f(U.zone, S.zone ? 1 : 0); gl.uniform1f(U.nearZ, lim.near * 1000); gl.uniform1f(U.farZ, isFinite(lim.far) ? lim.far * 1000 : 1e12);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    } else if (fallback) fallback.drawImage(colorCv, 0, 0);
+    updateUI(S.n, s, lim);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

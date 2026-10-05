@@ -51,6 +51,23 @@ function statusOf(sub, lesson) {
   if (lesson?.due_at && parseDate(lesson.due_at) < new Date()) return ["late", "Срок прошёл"];
   return ["none", "Не сдано"];
 }
+/* Сжатие фото на телефоне перед отправкой: длинная сторона до 2048 px, JPEG ~80%.
+   Снимок 5–10 МБ превращается примерно в 300–500 КБ. Если сжать не вышло — уходит оригинал. */
+async function compressImage(file) {
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.size < 600 * 1024) return file;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close?.();
+    const blob = await new Promise((r) => c.toBlob(r, "image/jpeg", 0.8));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch (_) { return file; }
+}
+const compressAll = (files) => Promise.all(files.map(compressImage));
 function openOverlay(html, cls = "") {
   $overlay.className = "overlay " + cls; $overlay.innerHTML = html; $overlay.hidden = false;
   document.body.style.overflow = "hidden";
@@ -147,11 +164,11 @@ function route() {
   const [, page, id] = (location.hash || "#/chat").split("/");
   const q = new URLSearchParams((location.hash.split("?")[1]) || "");
   document.querySelectorAll(".tabbar a").forEach((a) => a.classList.toggle("on",
-    a.dataset.tab === page || (a.dataset.tab === "chat" && (page === "dms")) || (a.dataset.tab === "lessons" && ["lesson", "edit"].includes(page)) || (a.dataset.tab === "people" && ["sub", "invite"].includes(page))));
+    a.dataset.tab === page || (a.dataset.tab === "chat" && (page === "dms")) || (a.dataset.tab === "lessons" && ["lesson", "edit"].includes(page)) || (a.dataset.tab === "people" && ["sub", "invite"].includes(page)) || (a.dataset.tab === "trainers" && page === "trainer")));
   $view.className = "view";
   S.thread = null;
   const clean = (x) => (x || "").split("?")[0];
-  const pages = { chat: () => viewChat(clean(id)), dms: viewDms, lessons: viewLessons, lesson: () => viewLesson(clean(id), q.get("tab")),
+  const pages = { trainers: viewTrainers, trainer: () => viewTrainer(clean(id)), chat: () => viewChat(clean(id)), dms: viewDms, lessons: viewLessons, lesson: () => viewLesson(clean(id), q.get("tab")),
     edit: () => viewEdit(clean(id)), people: viewPeople, sub: () => viewSub(clean(id)), invite: viewInvite, me: viewMe };
   (pages[page] || pages.chat)().catch((e) => { $view.innerHTML = `<div class="empty">${esc(errText(e))}</div>`; });
 }
@@ -241,8 +258,8 @@ async function viewChat(peer) {
     if (!text && !files.length) return;
     const fd = new FormData();
     fd.append("author", me); if (t.peer) fd.append("to", t.peer);
-    fd.append("text", text); files.forEach((f) => fd.append("images", f));
     const btn = e.target.querySelector(".send"); btn.disabled = true;
+    fd.append("text", text); (await compressAll(files)).forEach((f) => fd.append("images", f));
     try { await pb.collection("messages").create(fd); txt.value = ""; files = []; att.innerHTML = ""; grow(); }
     catch (ex) { toast(errText(ex)); }
     btn.disabled = false; txt.focus();
@@ -414,11 +431,12 @@ function renderWork(pane, l, sub, editing) {
     const err = pane.querySelector("#wErr"), btn = form.querySelector("[type=submit]");
     const text = textIn.value.trim();
     if (!text && !added.length && !(sub && (sub.files || []).length > removed.length)) { err.textContent = "Добавьте текст или файлы."; err.hidden = false; return; }
+    btn.disabled = true; btn.textContent = "Отправляю…"; err.hidden = true;
+    const ready = await compressAll(added);
     const fd = new FormData();
     fd.append("text", text);
-    if (sub) { added.forEach((f) => fd.append("files+", f)); removed.forEach((f) => fd.append("files-", f)); }
-    else { fd.append("lesson", l.id); fd.append("student", S.me.id); added.forEach((f) => fd.append("files", f)); }
-    btn.disabled = true; btn.textContent = "Отправляю…"; err.hidden = true;
+    if (sub) { ready.forEach((f) => fd.append("files+", f)); removed.forEach((f) => fd.append("files-", f)); }
+    else { fd.append("lesson", l.id); fd.append("student", S.me.id); ready.forEach((f) => fd.append("files", f)); }
     try {
       const saved = sub ? await pb.collection("submissions").update(sub.id, fd) : await pb.collection("submissions").create(fd);
       toast("Работа отправлена");
@@ -591,6 +609,27 @@ async function viewInvite() {
     });
   };
   draw();
+}
+
+/* ---------- тренажёры ---------- */
+const TRAINERS = [
+  { id: "focal", file: "/trainers/focal.html", tag: "Объективы", title: "Фокусное расстояние и перспектива", text: "Как фокусное и дистанция меняют лицо и фон. Бочка широкоугольника и подушка телевика." },
+  { id: "dof", file: "/trainers/dof.html", tag: "Резкость", title: "ГРИП: глубина резкости", text: "Дистанция фокусировки, диафрагма и фокусное. Нажмите на кадр, чтобы навести фокус." },
+  { id: "exposure", file: "/trainers/exposure.html", tag: "Экспозиция", title: "Выдержка, диафрагма, ISO", text: "Солнце, облачно, ночь. Режимы M, A, S, P, фонтан, смаз и правило 1/фокусное." }
+];
+async function viewTrainers() {
+  $view.innerHTML = `<h1>Тренажёры</h1>
+  <p class="muted" style="margin-top:-6px">Интерактивные модели к занятиям. Крутите настройки и смотрите, что происходит с кадром.</p>
+  <div class="trainer-list">${TRAINERS.map((t) => `<a class="trainer-card" href="#/trainer/${t.id}">
+    <span class="k">${esc(t.tag)}</span><h2>${esc(t.title)}</h2><p>${esc(t.text)}</p></a>`).join("")}</div>`;
+}
+async function viewTrainer(id) {
+  const t = TRAINERS.find((x) => x.id === id);
+  if (!t) return (location.hash = "#/trainers");
+  $view.className = "view trainermode";
+  $view.innerHTML = `<div class="trainer-bar"><a class="btn quiet" href="#/trainers" style="min-height:38px;padding:6px 14px">← Все</a><b>${esc(t.title)}</b>
+    <a class="btn quiet" href="${t.file}" target="_blank" rel="noopener" style="margin-left:auto;min-height:38px;padding:6px 14px">Открыть отдельно</a></div>
+    <iframe class="trainer-frame" src="${t.file}" title="${esc(t.title)}" allow="fullscreen" allowfullscreen></iframe>`;
 }
 
 /* ---------- профиль ---------- */

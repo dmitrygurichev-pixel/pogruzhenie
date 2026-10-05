@@ -22,7 +22,7 @@ button, input, textarea { font: inherit; color: inherit; }
 .boot { padding: 40px 0; color: var(--muted); }
 
 .tabbar { position: fixed; inset: auto 0 0 0; height: var(--tab); padding: 10px 12px env(safe-area-inset-bottom, 0px); background: var(--paper); border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: center; z-index: 20; }
-.tabbar a { position: relative; flex: 0 1 160px; display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 100px; text-decoration: none; font-weight: 700; font-size: 15px; }
+.tabbar a { position: relative; flex: 0 1 150px; padding: 0 8px; white-space: nowrap; display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 100px; text-decoration: none; font-weight: 700; font-size: 15px; }
 .tabbar a.on { background: var(--ink); color: #fff; }
 .dot { position: absolute; top: 9px; right: 22px; width: 9px; height: 9px; border-radius: 100px; background: var(--ter); }
 
@@ -171,3 +171,15 @@ table.mon tr.sum td { color: var(--muted); font-size: 13px; font-weight: 600; }
   .sheet { animation: up 0.25s ease-out; }
   @keyframes up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 }
+
+/* тренажёры */
+.trainer-list { display: grid; gap: 14px; }
+.trainer-card { display: block; text-decoration: none; background: var(--mist); border-radius: 24px; padding: 20px 22px; }
+.trainer-card .k { display: inline-block; background: var(--ter); color: #fff; border-radius: 100px; padding: 3px 12px; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.trainer-card h2 { margin: 0 0 6px; font-size: 22px; }
+.trainer-card p { margin: 0; color: var(--muted); font-size: 15px; }
+.view.trainermode { padding: var(--top) 0 var(--tab); max-width: none; }
+.trainer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.trainer-bar b { flex: 1 1 140px; min-width: 0; text-transform: uppercase; font-weight: 850; font-size: 15px; }
+.trainer-frame { display: block; width: 100%; height: calc(100dvh - var(--top) - var(--tab) - 61px); border: 0; background: #fff; }
+@media (max-width: 400px) { .tabbar a { font-size: 13px; } }

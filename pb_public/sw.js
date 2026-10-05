@@ -1,6 +1,6 @@
 // Офлайн-оболочка приложения. API всегда идёт в сеть.
-const CACHE = "pp-v1";
-const SHELL = ["/", "/index.html", "/style.css?v=1", "/app.js?v=1", "/vendor/pocketbase.umd.js", "/vendor/marked.umd.js", "/vendor/purify.min.js", "/fonts/InterVariable.woff2", "/icons/icon-192.png", "/manifest.webmanifest"];
+const CACHE = "pp-v3";
+const SHELL = ["/", "/index.html", "/style.css?v=2", "/app.js?v=3", "/vendor/pocketbase.umd.js", "/vendor/marked.umd.js", "/vendor/purify.min.js", "/fonts/InterVariable.woff2", "/icons/icon-192.png", "/manifest.webmanifest"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
